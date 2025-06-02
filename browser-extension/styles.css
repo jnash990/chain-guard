@@ -1,0 +1,153 @@
+/* Control Panel */
+.chain-guard-panel {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #2c3e50;
+  border-radius: 8px;
+  padding: 12px;
+  color: white;
+  font-family: Arial, sans-serif;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  z-index: 9999;
+  min-width: 200px;
+}
+
+.chain-guard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  cursor: move;
+}
+
+.chain-guard-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0 5px;
+}
+
+.chain-guard-status {
+  text-align: center;
+  margin: 10px 0;
+}
+
+.status-light {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-block;
+  margin: 0 5px;
+}
+
+.status-light.red {
+  background-color: #e74c3c;
+  box-shadow: 0 0 10px #e74c3c;
+}
+
+.status-light.yellow {
+  background-color: #f1c40f;
+  box-shadow: 0 0 10px #f1c40f;
+}
+
+.status-light.green {
+  background-color: #2ecc71;
+  box-shadow: 0 0 10px #2ecc71;
+}
+
+.chain-guard-controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.chain-guard-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.chain-guard-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* API Key Prompt */
+.chain-guard-prompt {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+}
+
+.chain-guard-prompt-content {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+}
+
+.chain-guard-prompt-content h3 {
+  margin-top: 0;
+  color: #2c3e50;
+}
+
+.chain-guard-prompt-content input {
+  width: 100%;
+  padding: 8px;
+  margin: 10px 0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.chain-guard-prompt-content button {
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.chain-guard-prompt-content button:hover {
+  background: #2980b9;
+}
+
+/* Error Message */
+.chain-guard-error {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #e74c3c;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 4px;
+  z-index: 10000;
+  animation: fadeIn 0.3s, fadeOut 0.3s 2.7s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+} 
