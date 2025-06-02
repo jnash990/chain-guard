@@ -1,5 +1,5 @@
 // Configuration
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = 'https://torn-chain-guard.up.railway.app/api/';
 const POLL_INTERVAL = 5000; // 5 seconds
 
 // State
@@ -13,12 +13,35 @@ let controlPanel = null;
 let statusIndicator = null;
 let attackButton = null;
 
+// Listen for messages from popup
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('Content script received message:', request);
+  if (request.action === 'getUserData') {
+    sendResponse({
+      playerId: userData?.playerId,
+      factionId: userData?.factionId,
+      isLeader: isLeader
+    });
+  }
+  return true;
+});
+
 // Initialize extension
 async function initialize() {
   // Check if API key is stored
   const apiKey = await chrome.storage.local.get('tornApiKey');
   if (!apiKey.tornApiKey) {
-    showApiKeyPrompt();
+    return; // Don't show prompt, let popup handle it
+  }
+
+  // Check if we have stored user data
+  const { playerId, factionId: storedFactionId, isLeader: storedIsLeader } = await chrome.storage.local.get(['playerId', 'factionId', 'isLeader']);
+  
+  if (playerId && storedFactionId) {
+    userData = { playerId, factionId: storedFactionId };
+    isLeader = storedIsLeader;
+    factionId = storedFactionId;
+    startChainMonitoring();
     return;
   }
 
@@ -28,7 +51,6 @@ async function initialize() {
     const data = await response.json();
     
     if (data.error) {
-      showError('Invalid API key');
       return;
     }
 
@@ -44,16 +66,25 @@ async function initialize() {
     isLeader = roleData.role === 'leader';
     factionId = roleData.faction_id;
 
+    // Store the data
+    await chrome.storage.local.set({
+      playerId: userData.playerId,
+      factionId: userData.factionId,
+      isLeader: isLeader
+    });
+
     // Start monitoring chain status
     startChainMonitoring();
   } catch (error) {
     console.error('Error initializing:', error);
-    showError('Failed to initialize');
   }
 }
 
 // Create and inject the control panel
 function createControlPanel() {
+  // Only create panel if user is a leader and chain is active
+  if (!isLeader || !chainStatus) return;
+
   controlPanel = document.createElement('div');
   controlPanel.id = 'chain-guard-panel';
   controlPanel.className = 'chain-guard-panel';
@@ -72,13 +103,11 @@ function createControlPanel() {
   const controls = document.createElement('div');
   controls.className = 'chain-guard-controls';
   
-  if (isLeader) {
-    controls.innerHTML = `
-      <button class="chain-guard-btn" data-status="green">🟢</button>
-      <button class="chain-guard-btn" data-status="yellow">🟡</button>
-      <button class="chain-guard-btn" data-status="red">🔴</button>
-    `;
-  }
+  controls.innerHTML = `
+    <button class="chain-guard-btn" data-status="green">🟢</button>
+    <button class="chain-guard-btn" data-status="yellow">🟡</button>
+    <button class="chain-guard-btn" data-status="red">🔴</button>
+  `;
 
   controlPanel.appendChild(header);
   controlPanel.appendChild(statusIndicator);
@@ -92,14 +121,12 @@ function createControlPanel() {
     controlPanel.remove();
   });
 
-  if (isLeader) {
-    controls.querySelectorAll('.chain-guard-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const status = btn.dataset.status;
-        await updateChainStatus(status);
-      });
+  controls.querySelectorAll('.chain-guard-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const status = btn.dataset.status;
+      await updateChainStatus(status);
     });
-  }
+  });
 
   document.body.appendChild(controlPanel);
 }
@@ -156,7 +183,6 @@ async function updateChainStatus(status) {
     await checkChainStatus();
   } catch (error) {
     console.error('Error updating chain status:', error);
-    showError('Failed to update chain status');
   }
 }
 
@@ -210,38 +236,6 @@ function updateUI() {
   if (!controlPanel) {
     createControlPanel();
   }
-}
-
-// Show API key prompt
-function showApiKeyPrompt() {
-  const prompt = document.createElement('div');
-  prompt.className = 'chain-guard-prompt';
-  prompt.innerHTML = `
-    <div class="chain-guard-prompt-content">
-      <h3>Chain Guard Setup</h3>
-      <p>Please enter your Torn API key:</p>
-      <input type="text" id="api-key-input" placeholder="Enter API key">
-      <button id="save-api-key">Save</button>
-    </div>
-  `;
-
-  document.body.appendChild(prompt);
-
-  prompt.querySelector('#save-api-key').addEventListener('click', async () => {
-    const apiKey = prompt.querySelector('#api-key-input').value;
-    await chrome.storage.local.set({ tornApiKey: apiKey });
-    prompt.remove();
-    initialize();
-  });
-}
-
-// Show error message
-function showError(message) {
-  const error = document.createElement('div');
-  error.className = 'chain-guard-error';
-  error.textContent = message;
-  document.body.appendChild(error);
-  setTimeout(() => error.remove(), 3000);
 }
 
 // Start monitoring chain status

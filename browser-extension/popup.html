@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chain Guard</title>
+  <style>
+    body {
+      width: 300px;
+      padding: 15px;
+      font-family: Arial, sans-serif;
+    }
+    .status-container {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+      background: #f5f5f5;
+    }
+    .status-light {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    .status-light.green { background: #4CAF50; }
+    .status-light.yellow { background: #FFC107; }
+    .status-light.red { background: #F44336; }
+    button {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0;
+      border: none;
+      border-radius: 4px;
+      background: #2196F3;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #1976D2;
+    }
+    .error {
+      color: #F44336;
+      margin: 10px 0;
+    }
+    .debug-info {
+      margin-top: 15px;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .debug-info h3 {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      color: #666;
+    }
+    .debug-info p {
+      margin: 4px 0;
+      color: #333;
+    }
+    .debug-info .label {
+      font-weight: bold;
+      color: #666;
+    }
+    .api-key-container {
+      margin: 10px 0;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+    .api-key-container input {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .leader-controls {
+      margin: 10px 0;
+      display: none;
+    }
+    .leader-controls.active {
+      display: flex;
+      justify-content: space-between;
+      gap: 5px;
+    }
+    .leader-controls button {
+      flex: 1;
+      margin: 0;
+    }
+    .chain-actions {
+      margin: 10px 0;
+      display: none;
+    }
+    .chain-actions.active {
+      display: block;
+    }
+    .chain-actions button {
+      width: 100%;
+      margin: 5px 0;
+    }
+    .chain-actions button.start {
+      background: #4CAF50;
+    }
+    .chain-actions button.start:hover {
+      background: #45a049;
+    }
+    .chain-actions button.end {
+      background: #f44336;
+    }
+    .chain-actions button.end:hover {
+      background: #da190b;
+    }
+    .chain-guard-btn[data-status="green"] {
+      background: #4CAF50;
+    }
+    .chain-guard-btn[data-status="green"]:hover {
+      background: #45a049;
+    }
+    .chain-guard-btn[data-status="yellow"] {
+      background: #FFC107;
+    }
+    .chain-guard-btn[data-status="yellow"]:hover {
+      background: #e6ac00;
+    }
+    .chain-guard-btn[data-status="red"] {
+      background: #f44336;
+    }
+    .chain-guard-btn[data-status="red"]:hover {
+      background: #da190b;
+    }
+  </style>
+</head>
+<body>
+  <h2>Chain Guard</h2>
+  
+  <!-- API Key Input (shown only when no key is stored) -->
+  <div id="api-key-container" class="api-key-container" style="display: none;">
+    <h3>Setup API Key</h3>
+    <p>Get your API key from <a href="https://www.torn.com/preferences.php#tab=api" target="_blank">Torn Preferences</a></p>
+    <input type="text" id="api-key-input" placeholder="Enter your API key">
+    <button id="save-api-key">Save API Key</button>
+  </div>
+
+  <!-- Chain Status -->
+  <div class="status-container">
+    <div id="status-display">
+      <span class="status-light"></span>
+      <span id="status-text">Loading...</span>
+    </div>
+  </div>
+
+  <!-- Chain Start/End Actions -->
+  <div id="chain-actions" class="chain-actions">
+    <button id="start-chain" class="start">Start Chain</button>
+  </div>
+
+  <!-- Chain Status Controls -->
+  <div id="leader-controls" class="leader-controls">
+    <button class="chain-guard-btn" data-status="green">Active</button>
+    <button class="chain-guard-btn" data-status="yellow">Pause</button>
+    <button class="chain-guard-btn" data-status="red">Stop</button>
+    <button id="end-chain" class="end">End Chain</button>
+  </div>
+
+  <div id="error-message" class="error"></div>
+  
+  <!-- Debug Information -->
+  <div class="debug-info">
+    <h3>Debug Information</h3>
+    <p><span class="label">Player ID:</span> <span id="debug-player-id">-</span></p>
+    <p><span class="label">Faction ID:</span> <span id="debug-faction-id">-</span></p>
+    <p><span class="label">Is Leader:</span> <span id="debug-is-leader">-</span></p>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html> 
