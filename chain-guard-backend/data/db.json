@@ -1,0 +1,14 @@
+{
+  "factions": {
+    "45415": {
+      "leaders": [
+        3760375
+      ],
+      "chain": {
+        "active": true,
+        "status": "red",
+        "updatedAt": 1748881522762
+      }
+    }
+  }
+}
