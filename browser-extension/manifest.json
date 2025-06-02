@@ -9,7 +9,7 @@
     "scripting"
   ],
   "host_permissions": [
-    "http://localhost:3000/*",
+    "https://torn-chain-guard.up.railway.app/*",
     "https://api.torn.com/*"
   ],
   "action": {
