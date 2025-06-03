@@ -1,5 +1,5 @@
 // Configuration
-const API_BASE_URL = 'https://torn-chain-guard.up.railway.app/api/';
+const API_BASE_URL = 'https://torn-chain-guard.up.railway.app/api';
 const POLL_INTERVAL = 5000; // 5 seconds
 
 // State
@@ -39,7 +39,7 @@ async function initialize() {
   
   if (playerId && storedFactionId) {
     userData = { playerId, factionId: storedFactionId };
-    isLeader = storedIsLeader;
+    isLeader = storedIsLeader === undefined ? false : storedIsLeader;
     factionId = storedFactionId;
     startChainMonitoring();
     return;
@@ -66,7 +66,7 @@ async function initialize() {
     isLeader = roleData.role === 'leader';
     factionId = roleData.faction_id;
 
-    // Store the data
+    // Store the data, always set isLeader (true or false)
     await chrome.storage.local.set({
       playerId: userData.playerId,
       factionId: userData.factionId,
@@ -82,8 +82,14 @@ async function initialize() {
 
 // Create and inject the control panel
 function createControlPanel() {
-  // Only create panel if user is a leader and chain is active
-  if (!isLeader || !chainStatus) return;
+  // Only create panel if chain is active
+  if (!chainStatus) return;
+
+  // Remove existing panel if present
+  if (controlPanel) {
+    controlPanel.remove();
+    controlPanel = null;
+  }
 
   controlPanel = document.createElement('div');
   controlPanel.id = 'chain-guard-panel';
@@ -96,36 +102,46 @@ function createControlPanel() {
     <button class="chain-guard-close">×</button>
   `;
 
+  // Status indicator with traffic lights
   statusIndicator = document.createElement('div');
   statusIndicator.className = 'chain-guard-status';
-  statusIndicator.innerHTML = '<div class="status-light"></div>';
-
-  const controls = document.createElement('div');
-  controls.className = 'chain-guard-controls';
-  
-  controls.innerHTML = `
-    <button class="chain-guard-btn" data-status="green">🟢</button>
-    <button class="chain-guard-btn" data-status="yellow">🟡</button>
-    <button class="chain-guard-btn" data-status="red">🔴</button>
+  statusIndicator.innerHTML = `
+    <div class="traffic-lights">
+      <span class="status-light green${chainStatus === 'green' ? ' active' : ''}"></span>
+      <span class="status-light yellow${chainStatus === 'yellow' ? ' active' : ''}"></span>
+      <span class="status-light red${chainStatus === 'red' ? ' active' : ''}"></span>
+      <span class="status-label">${chainStatus ? chainStatus.charAt(0).toUpperCase() + chainStatus.slice(1) : ''}</span>
+    </div>
   `;
 
   controlPanel.appendChild(header);
   controlPanel.appendChild(statusIndicator);
-  controlPanel.appendChild(controls);
+
+  // Only show controls for leaders
+  if (isLeader) {
+    const controls = document.createElement('div');
+    controls.className = 'chain-guard-controls';
+    controls.innerHTML = `
+      <button class="chain-guard-btn" data-status="green">🟢</button>
+      <button class="chain-guard-btn" data-status="yellow">🟡</button>
+      <button class="chain-guard-btn" data-status="red">🔴</button>
+    `;
+    controls.querySelectorAll('.chain-guard-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const status = btn.dataset.status;
+        await updateChainStatus(status);
+      });
+    });
+    controlPanel.appendChild(controls);
+  }
 
   // Make panel draggable
   makeDraggable(controlPanel, header);
 
-  // Add event listeners
+  // Add event listener for close button
   header.querySelector('.chain-guard-close').addEventListener('click', () => {
     controlPanel.remove();
-  });
-
-  controls.querySelectorAll('.chain-guard-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const status = btn.dataset.status;
-      await updateChainStatus(status);
-    });
+    controlPanel = null;
   });
 
   document.body.appendChild(controlPanel);
@@ -211,30 +227,72 @@ async function checkChainStatus() {
 function updateUI() {
   if (!chainStatus) return;
 
-  // Update status indicator
-  if (statusIndicator) {
-    const statusLight = statusIndicator.querySelector('.status-light');
-    statusLight.className = `status-light ${chainStatus}`;
-  }
+  // Remove and recreate the panel to update status lights and controls
+  createControlPanel();
 
-  // Handle attack button
-  const attackBtn = document.querySelector('button[data-action="attack"]');
-  if (attackBtn) {
+  // Handle attack button(s) on profile page
+  const attackButtons = Array.from(document.querySelectorAll('a[id^="button0-profile-"]'));
+  attackButtons.forEach(btn => {
+    // Remove any previous tooltip
+    btn.removeAttribute('data-chain-guard-tooltip');
+    btn.removeEventListener('mouseenter', btn._chainGuardTooltipHandler);
+    btn.removeEventListener('mouseleave', btn._chainGuardTooltipRemover);
+    btn.style.pointerEvents = '';
+    btn.title = '';
+    btn.classList.remove('chain-guard-disabled');
+    btn.removeAttribute('aria-disabled');
+
     if (chainStatus === 'red') {
-      attackBtn.disabled = true;
-      attackBtn.title = 'Chain is paused (red)';
+      btn.title = 'STOP! Check chat';
+      btn.setAttribute('data-chain-guard-tooltip', 'STOP! Check chat');
+      btn._chainGuardTooltipHandler = function() {
+        showChainGuardTooltip(btn, 'STOP! Check chat');
+      };
+      btn._chainGuardTooltipRemover = function() {
+        hideChainGuardTooltip();
+      };
+      btn.addEventListener('mouseenter', btn._chainGuardTooltipHandler);
+      btn.addEventListener('mouseleave', btn._chainGuardTooltipRemover);
     } else if (chainStatus === 'yellow') {
-      attackBtn.disabled = false;
-      attackBtn.title = 'Chain is active but be careful (yellow)';
-    } else {
-      attackBtn.disabled = false;
-      attackBtn.title = 'Chain is active (green)';
+      btn.title = 'Pause! Check faction chat.';
+      btn.setAttribute('data-chain-guard-tooltip', 'Pause! Check faction chat.');
+      btn._chainGuardTooltipHandler = function() {
+        showChainGuardTooltip(btn, 'Pause! Check faction chat.');
+      };
+      btn._chainGuardTooltipRemover = function() {
+        hideChainGuardTooltip();
+      };
+      btn.addEventListener('mouseenter', btn._chainGuardTooltipHandler);
+      btn.addEventListener('mouseleave', btn._chainGuardTooltipRemover);
     }
-  }
+    // If green or no chain, button is normal
+    if (chainStatus === 'green' || !chainStatus) {
+      btn.classList.remove('chain-guard-disabled');
+      btn.removeAttribute('aria-disabled');
+      btn.style.pointerEvents = '';
+    }
+  });
+}
 
-  // Show control panel if not already shown
-  if (!controlPanel) {
-    createControlPanel();
+// Tooltip helpers
+let chainGuardTooltipEl = null;
+function showChainGuardTooltip(target, text) {
+  hideChainGuardTooltip();
+  chainGuardTooltipEl = document.createElement('div');
+  chainGuardTooltipEl.className = 'chain-guard-tooltip';
+  chainGuardTooltipEl.textContent = text;
+  document.body.appendChild(chainGuardTooltipEl);
+  const rect = target.getBoundingClientRect();
+  chainGuardTooltipEl.style.position = 'fixed';
+  chainGuardTooltipEl.style.left = `${rect.left + rect.width / 2}px`;
+  chainGuardTooltipEl.style.top = `${rect.top - 32}px`;
+  chainGuardTooltipEl.style.transform = 'translateX(-50%)';
+  chainGuardTooltipEl.style.zIndex = 10001;
+}
+function hideChainGuardTooltip() {
+  if (chainGuardTooltipEl) {
+    chainGuardTooltipEl.remove();
+    chainGuardTooltipEl = null;
   }
 }
 
