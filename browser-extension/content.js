@@ -242,6 +242,46 @@ function updateUI() {
     btn.classList.remove('chain-guard-disabled');
     btn.removeAttribute('aria-disabled');
 
+    // Remove previous overlay if any
+    if (btn._chainGuardOverlay) {
+      btn._chainGuardOverlay.remove();
+      btn._chainGuardOverlay = null;
+    }
+
+    // Only add overlay if chain is red or yellow
+    if (chainStatus === 'red' || chainStatus === 'yellow') {
+      // Create overlay
+      const overlay = document.createElement('div');
+      overlay.style.position = 'absolute';
+      const rect = btn.getBoundingClientRect();
+      overlay.style.left = btn.offsetLeft + 'px';
+      overlay.style.top = btn.offsetTop + 'px';
+      overlay.style.width = btn.offsetWidth + 'px';
+      overlay.style.height = btn.offsetHeight + 'px';
+      overlay.style.background = 'rgba(0,0,0,0)'; // fully transparent
+      overlay.style.zIndex = 9999;
+      overlay.style.cursor = 'pointer';
+      overlay.style.pointerEvents = 'auto';
+      overlay.className = 'chain-guard-overlay';
+
+      // Place overlay in the same offset parent as the button
+      btn.offsetParent.appendChild(overlay);
+      btn._chainGuardOverlay = overlay;
+
+      overlay.addEventListener('click', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        const message = (chainStatus === 'red')
+          ? 'STOP! Check chat before attacking. Are you sure you want to proceed?'
+          : 'Pause! Check faction chat before attacking. Are you sure you want to proceed?';
+        if (window.confirm(message)) {
+          overlay.remove();
+          btn._chainGuardOverlay = null;
+          btn.click(); // Simulate click on the button
+        }
+      });
+    }
+
     // Remove previous click handler if any
     if (btn._chainGuardClickHandler) {
       btn.removeEventListener('click', btn._chainGuardClickHandler);
@@ -256,14 +296,17 @@ function updateUI() {
         : (chainStatus === 'yellow')
           ? 'Pause! Check faction chat before attacking. Are you sure you want to proceed?'
           : null;
+      e.preventDefault(); // Always prevent default navigation
       if (message) {
-        if (!window.confirm(message)) {
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
+        if (window.confirm(message)) {
+          window.location.href = btn.href;
+        } else {
+          // Do nothing, user cancelled
         }
+      } else {
+        // No message, proceed as normal
+        window.location.href = btn.href;
       }
-      // Otherwise, allow default action
     };
     btn.addEventListener('click', btn._chainGuardClickHandler);
 
@@ -328,4 +371,34 @@ function startChainMonitoring() {
 }
 
 // Initialize when the page loads
-initialize(); 
+initialize();
+
+document.addEventListener('click', function(e) {
+  // Find the closest <a> with the attack button id pattern
+  const btn = e.target.closest('a[id^="button0-profile-"]');
+  if (!btn) return;
+
+  // Only handle if visible and enabled
+  if (btn.classList.contains('chain-guard-disabled') || btn.style.pointerEvents === 'none') return;
+
+  // Get the current chain status (from your global variable)
+  let message = null;
+  if (chainStatus === 'red') {
+    message = 'STOP! Check chat before attacking. Are you sure you want to proceed?';
+  } else if (chainStatus === 'yellow') {
+    message = 'Pause! Check faction chat before attacking. Are you sure you want to proceed?';
+  }
+
+  // Always prevent default navigation
+  e.preventDefault();
+
+  if (message) {
+    if (window.confirm(message)) {
+      window.location.href = btn.href;
+    }
+    // else: do nothing
+  } else {
+    // No message, proceed as normal
+    window.location.href = btn.href;
+  }
+}, true); // Use capture phase to run before site handlers 
