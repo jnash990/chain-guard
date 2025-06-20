@@ -242,6 +242,30 @@ function updateUI() {
     btn.classList.remove('chain-guard-disabled');
     btn.removeAttribute('aria-disabled');
 
+    // Remove previous click handler if any
+    if (btn._chainGuardClickHandler) {
+      btn.removeEventListener('click', btn._chainGuardClickHandler);
+      btn._chainGuardClickHandler = null;
+    }
+
+    // Add confirmation alert on click
+    btn._chainGuardClickHandler = function(e) {
+      const message = (chainStatus === 'red')
+        ? 'STOP! Check chat before attacking. Are you sure you want to proceed?'
+        : (chainStatus === 'yellow')
+          ? 'Pause! Check faction chat before attacking. Are you sure you want to proceed?'
+          : null;
+      if (message) {
+        if (!window.confirm(message)) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+      }
+      // Otherwise, allow default action
+    };
+    btn.addEventListener('click', btn._chainGuardClickHandler, true);
+
     if (chainStatus === 'red') {
       btn.title = 'STOP! Check chat';
       btn.setAttribute('data-chain-guard-tooltip', 'STOP! Check chat');
