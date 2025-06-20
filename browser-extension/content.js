@@ -250,6 +250,7 @@ function updateUI() {
 
     // Add confirmation alert on click
     btn._chainGuardClickHandler = function(e) {
+      console.log('Chain Guard confirmation handler triggered');
       const message = (chainStatus === 'red')
         ? 'STOP! Check chat before attacking. Are you sure you want to proceed?'
         : (chainStatus === 'yellow')
@@ -264,7 +265,7 @@ function updateUI() {
       }
       // Otherwise, allow default action
     };
-    btn.addEventListener('click', btn._chainGuardClickHandler, true);
+    btn.addEventListener('click', btn._chainGuardClickHandler);
 
     if (chainStatus === 'red') {
       btn.title = 'STOP! Check chat';
